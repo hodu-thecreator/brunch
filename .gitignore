@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+content/drafts/
+content/published/
+.DS_Store
