@@ -1,7 +1,6 @@
 """Content Management Agent CLI - 멀티플랫폼 콘텐츠 관리 에이전트."""
 
 import os
-import sys
 from typing import Optional
 
 import typer

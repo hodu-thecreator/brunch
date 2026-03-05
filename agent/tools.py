@@ -5,9 +5,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-CONTENT_DIR = Path(__file__).parent.parent / "content"
-DRAFTS_DIR = CONTENT_DIR / "drafts"
-PUBLISHED_DIR = CONTENT_DIR / "published"
+DRAFTS_DIR = Path(__file__).parent.parent / "content" / "drafts"
 
 TOOLS = [
     {
