@@ -7,9 +7,10 @@ import anthropic
 
 from .prompts.base import AGENT_SYSTEM_PROMPT
 from .prompts.platforms import get_platform_prompt
+from .style_learner import build_style_system_prompt
 from .tools import TOOLS, execute_tool
 
-MODEL = "claude-sonnet-4-6"
+MODEL = "claude-opus-4-6"
 MAX_TOKENS = 8096
 
 
@@ -26,6 +27,12 @@ class ContentAgent:
             platform_guide = get_platform_prompt(platform)
             if platform_guide:
                 base += f"\n\n## 현재 작업 플랫폼: {platform.upper()}\n{platform_guide}"
+
+            # Inject learned personal style profile if available
+            style_injection = build_style_system_prompt(platform)
+            if style_injection:
+                base += f"\n\n{style_injection}"
+
         return base
 
     def _run_agentic_loop(
@@ -42,6 +49,7 @@ class ContentAgent:
             response = self.client.messages.create(
                 model=MODEL,
                 max_tokens=MAX_TOKENS,
+                thinking={"type": "adaptive"},
                 system=system_prompt,
                 tools=TOOLS,
                 messages=self.conversation_history,
@@ -94,13 +102,17 @@ class ContentAgent:
                 return "\n".join(text_parts)
 
     def _handle_llm_tool(self, tool_name: str, tool_input: dict, platform: str | None) -> str:
-        """Handle tools that require LLM generation."""
+        """Handle tools that require LLM generation, with personal style injection."""
         platform_guide = get_platform_prompt(platform) if platform else ""
+        style_guide = build_style_system_prompt(platform) if platform else ""
+
+        style_section = f"\n\n## 작성자 개인 말투 적용\n{style_guide}" if style_guide else ""
 
         prompts = {
             "generate_content": (
                 f"다음 요청에 맞는 {platform} 콘텐츠를 작성하세요.\n\n"
-                f"## 플랫폼 가이드라인\n{platform_guide}\n\n"
+                f"## 플랫폼 가이드라인\n{platform_guide}"
+                f"{style_section}\n\n"
                 f"## 요청\n"
                 f"- 주제: {tool_input.get('topic', '')}\n"
                 f"- 키워드: {', '.join(tool_input.get('keywords', []))}\n"
@@ -110,14 +122,16 @@ class ContentAgent:
             ),
             "refine_content": (
                 f"다음 콘텐츠를 {tool_input.get('refinement_goal')} 방향으로 개선하세요.\n\n"
-                f"## 플랫폼 가이드라인\n{platform_guide}\n\n"
+                f"## 플랫폼 가이드라인\n{platform_guide}"
+                f"{style_section}\n\n"
                 f"## 원본 콘텐츠\n{tool_input.get('original_content', '')}\n\n"
                 "개선된 콘텐츠만 출력하세요."
             ),
             "repurpose_content": (
                 f"{tool_input.get('source_platform')} 용 콘텐츠를 "
                 f"{tool_input.get('target_platform')} 플랫폼에 맞게 재구성하세요.\n\n"
-                f"## 대상 플랫폼 가이드라인\n{platform_guide}\n\n"
+                f"## 대상 플랫폼 가이드라인\n{platform_guide}"
+                f"{style_section}\n\n"
                 f"## 원본 콘텐츠\n{tool_input.get('original_content', '')}\n\n"
                 "변환된 콘텐츠만 출력하세요."
             ),
@@ -133,9 +147,11 @@ class ContentAgent:
         resp = self.client.messages.create(
             model=MODEL,
             max_tokens=MAX_TOKENS,
+            thinking={"type": "adaptive"},
             messages=[{"role": "user", "content": prompt}],
         )
-        return resp.content[0].text
+        text_parts = [b.text for b in resp.content if hasattr(b, "text")]
+        return "\n".join(text_parts)
 
     def chat(self, message: str, platform: str | None = None) -> str:
         """Send a message to the agent and get a response."""

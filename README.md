@@ -42,6 +42,35 @@ Claude AI를 활용해 각 플랫폼에 최적화된 콘텐츠를 생성·관리
 
 ---
 
+## 내 말투 학습시키기
+
+에이전트가 내 글쓰기 스타일을 학습하면, 마치 내가 직접 쓴 것 같은 글을 생성합니다.
+
+### 학습 방법
+
+```bash
+# 1. 브런치에 올린 글을 파일로 저장 후 학습
+python main.py learn --platform brunch --file my_brunch_post.txt
+
+# 2. 직접 붙여넣기 (Ctrl+D로 완료)
+python main.py learn --platform instagram
+
+# 3. 여러 번 반복할수록 정확해짐 (샘플 누적)
+python main.py learn --platform linkedin --file post1.txt
+python main.py learn --platform linkedin --file post2.txt
+
+# 학습된 프로필 확인
+python main.py style-profiles
+```
+
+### 학습 후 효과
+
+- `generate`, `chat`, `repurpose` 모든 명령에 자동 적용
+- 샘플이 많을수록 말투 재현 정확도 향상
+- 플랫폼별로 독립적으로 학습 (브런치 에세이체 / 링크드인 전문가체 분리)
+
+---
+
 ## 설치 및 설정
 
 ```bash
@@ -55,7 +84,19 @@ cp .env.example .env
 
 ---
 
-## 사용법
+## 사용법 (빠른 시작)
+
+```bash
+# 1단계: 내 글 학습
+python main.py learn --platform brunch --file my_post.txt
+
+# 2단계: 내 말투로 글 생성
+python main.py generate "요즘 번아웃에 대한 단상" --platform brunch
+```
+
+---
+
+## 전체 사용법
 
 ### 대화형 모드 (추천)
 ```bash
@@ -91,6 +132,18 @@ python main.py repurpose --from brunch --to linkedin "여기에 원본 텍스트
 python main.py repurpose --from blog --to instagram --file my_post.md
 ```
 
+### 말투 학습 (Style Learning)
+```bash
+# 파일로 학습
+python main.py learn --platform brunch --file essay.txt
+
+# 직접 붙여넣기
+python main.py learn --platform instagram
+
+# 학습된 프로필 확인
+python main.py style-profiles
+```
+
 ### 주제 추천
 ```bash
 # 자기계발 분야 주제 5개
@@ -120,16 +173,17 @@ python main.py drafts --platform instagram
 ├── .env.example
 ├── agent/
 │   ├── agent.py             # 핵심 에이전트 (agentic loop)
+│   ├── style_learner.py     # 말투 학습 & 프로필 관리
 │   ├── tools.py             # 도구 정의 및 실행
 │   └── prompts/
 │       ├── base.py          # 에이전트 시스템 프롬프트
 │       └── platforms.py     # 플랫폼별 글쓰기 가이드
+├── style_profiles/          # 학습된 말투 프로필 (플랫폼별 JSON)
+│   ├── brunch.json
+│   ├── instagram.json
+│   └── linkedin.json
 └── content/
     ├── drafts/              # 저장된 초안
-    │   ├── brunch/
-    │   ├── blog/
-    │   ├── instagram/
-    │   └── linkedin/
     └── published/           # 발행 완료 콘텐츠
 ```
 

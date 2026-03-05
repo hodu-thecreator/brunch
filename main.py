@@ -243,6 +243,157 @@ def topics(
 
 
 @app.command()
+def learn(
+    platform: str = typer.Option(
+        ..., "--platform", "-p", help="학습할 플랫폼 (brunch/blog/instagram/linkedin)"
+    ),
+    file: Optional[typer.FileText] = typer.Option(None, "--file", "-f", help="글 파일 경로 (.txt/.md)"),
+):
+    """내 글쓰기 샘플을 학습해서 말투 프로필을 생성합니다.
+
+    파일을 지정하지 않으면 직접 텍스트를 붙여넣는 모드로 실행됩니다.
+
+    예시:
+
+      python main.py learn --platform brunch --file my_post.txt
+
+      python main.py learn --platform instagram  (대화형 입력)
+    """
+    if platform not in ["brunch", "blog", "instagram", "linkedin"]:
+        console.print("[red]올바른 플랫폼을 선택해주세요: brunch, blog, instagram, linkedin[/]")
+        raise typer.Exit(1)
+
+    print_header()
+    emoji = PLATFORM_EMOJIS.get(platform, "")
+    color = PLATFORM_COLORS.get(platform, "white")
+
+    from agent.style_learner import load_style_profile, list_profiles
+
+    # Show current profile status
+    existing = load_style_profile(platform)
+    if existing:
+        count = existing.get("samples_count", 0)
+        console.print(
+            f"\n[{color}]{emoji} {platform.upper()}[/] 기존 프로필: "
+            f"[bold]{count}개[/] 샘플 학습됨\n"
+        )
+    else:
+        console.print(f"\n[{color}]{emoji} {platform.upper()}[/] 새 스타일 프로필을 생성합니다.\n")
+
+    # Get the writing sample
+    if file:
+        sample_text = file.read().strip()
+        if not sample_text:
+            console.print("[red]파일이 비어있습니다.[/]")
+            raise typer.Exit(1)
+        console.print(f"[dim]파일에서 {len(sample_text)}자를 읽었습니다.[/]\n")
+    else:
+        console.print(
+            Panel(
+                f"[bold]{emoji} {platform.upper()} 글 샘플을 붙여넣으세요.[/]\n\n"
+                "[dim]• 실제로 올린 글일수록 말투 학습 정확도가 높아집니다\n"
+                "• 글이 길수록 좋습니다 (최소 200자 이상 권장)\n"
+                "• 여러 번 실행해서 샘플을 추가할수록 정확해집니다\n\n"
+                "입력 완료: Ctrl+D (Mac/Linux) 또는 Ctrl+Z Enter (Windows)[/]",
+                border_style=color,
+            )
+        )
+
+        lines = []
+        try:
+            while True:
+                line = input()
+                lines.append(line)
+        except EOFError:
+            pass
+
+        sample_text = "\n".join(lines).strip()
+        if len(sample_text) < 50:
+            console.print("[red]샘플이 너무 짧습니다. 최소 50자 이상 입력해주세요.[/]")
+            raise typer.Exit(1)
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        console.print("[red]ANTHROPIC_API_KEY가 설정되지 않았습니다.[/]")
+        raise typer.Exit(1)
+
+    console.print(f"[dim]샘플 {len(sample_text)}자 분석 중...[/]\n")
+
+    with console.status(
+        f"[{color}]Claude가 {platform} 글쓰기 스타일을 학습하는 중...[/]",
+        spinner="dots",
+    ):
+        from agent.style_learner import add_sample_and_analyze
+        profile = add_sample_and_analyze(platform, sample_text, api_key)
+
+    dna = profile.get("style_dna", {})
+    samples_count = profile.get("samples_count", 0)
+
+    console.print(
+        Panel(
+            f"[bold green]✓ {platform.upper()} 스타일 학습 완료![/]\n\n"
+            f"[bold]누적 샘플:[/] {samples_count}개\n\n"
+            f"[bold]스타일 요약:[/]\n{dna.get('style_summary', '')}\n\n"
+            f"[bold]톤앤매너:[/] {dna.get('tone', '')}\n\n"
+            f"[bold]페르소나:[/] {dna.get('persona', '')}\n\n"
+            f"[bold]자주 쓰는 표현:[/]\n"
+            + "\n".join(f"  • {e}" for e in dna.get("unique_expressions", [])[:5]),
+            title=f"[bold]{emoji} {platform.upper()} 스타일 프로필[/]",
+            border_style=color,
+        )
+    )
+
+    console.print(
+        f"\n[dim]이제 [bold]python main.py generate[/] 또는 [bold]python main.py chat --platform {platform}[/]을 "
+        f"실행하면 학습된 말투로 글을 씁니다.[/]\n"
+    )
+
+
+@app.command()
+def style_profiles():
+    """저장된 말투 프로필 목록을 확인합니다."""
+    from agent.style_learner import list_profiles, load_style_profile
+
+    profiles = list_profiles()
+    if not profiles:
+        console.print(
+            Panel(
+                "[dim]아직 학습된 스타일 프로필이 없습니다.\n\n"
+                "[bold]python main.py learn --platform brunch[/] 으로 시작해보세요.[/]",
+                title="말투 프로필",
+            )
+        )
+        return
+
+    print_header()
+    console.print()
+
+    for p in profiles:
+        platform = p["platform"]
+        emoji = PLATFORM_EMOJIS.get(platform, "")
+        color = PLATFORM_COLORS.get(platform, "white")
+
+        profile = load_style_profile(platform)
+        dna = profile.get("style_dna", {}) if profile else {}
+
+        console.print(
+            Panel(
+                f"[bold]샘플 수:[/] {p['samples_count']}개   [bold]업데이트:[/] {p['updated'][:10]}\n\n"
+                f"[bold]스타일 요약:[/]\n{dna.get('style_summary', '(분석 없음)')}\n\n"
+                f"[bold]톤:[/] {dna.get('tone', '')}\n"
+                f"[bold]페르소나:[/] {dna.get('persona', '')}",
+                title=f"[{color}]{emoji} {platform.upper()}[/]",
+                border_style=color,
+            )
+        )
+
+    console.print(
+        "[dim]💡 팁: [bold]python main.py learn --platform <플랫폼>[/] 으로 샘플을 추가하면 "
+        "더 정확해집니다.[/]\n"
+    )
+
+
+@app.command()
 def drafts(
     platform: str = typer.Option("all", "--platform", "-p", help="플랫폼 필터"),
 ):
