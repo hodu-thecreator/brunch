@@ -26,6 +26,7 @@ PLATFORM_COLORS = {
     "brunch": "bright_green",
     "blog": "bright_blue",
     "instagram": "bright_magenta",
+    "insta": "bright_magenta",
     "linkedin": "bright_cyan",
 }
 
@@ -33,7 +34,16 @@ PLATFORM_EMOJIS = {
     "brunch": "☕",
     "blog": "📝",
     "instagram": "📸",
+    "insta": "📸",
     "linkedin": "💼",
+}
+
+PLATFORM_CHANNEL_TYPE = {
+    "brunch": "커리어 채널",
+    "blog": "개인 채널",
+    "instagram": "개인 채널",
+    "insta": "개인 채널",
+    "linkedin": "커리어 채널",
 }
 
 
@@ -55,8 +65,9 @@ def print_header():
     """Print the application header."""
     console.print(
         Panel.fit(
-            "[bold]✍️  멀티플랫폼 콘텐츠 관리 에이전트[/]\n"
-            "[dim]브런치 ☕ | 블로그 📝 | 인스타그램 📸 | 링크드인 💼[/]",
+            "[bold]✍️  호두(전정호)의 멀티플랫폼 콘텐츠 에이전트[/]\n"
+            "[dim]커리어 채널: 브런치 ☕ · 링크드인 💼[/]\n"
+            "[dim]개인 채널:   블로그 📝 · 인스타그램 📸[/]",
             border_style="bright_yellow",
         )
     )
@@ -74,7 +85,7 @@ def chat(
     """에이전트와 대화형으로 콘텐츠를 작성합니다."""
     print_header()
 
-    if platform and platform not in ["brunch", "blog", "instagram", "linkedin"]:
+    if platform and platform not in ["brunch", "blog", "instagram", "insta", "linkedin"]:
         console.print("[red]올바른 플랫폼을 선택해주세요: brunch, blog, instagram, linkedin[/]")
         raise typer.Exit(1)
 
@@ -83,9 +94,14 @@ def chat(
     if platform:
         emoji = PLATFORM_EMOJIS.get(platform, "")
         color = PLATFORM_COLORS.get(platform, "white")
-        console.print(f"\n[{color}]{emoji} {platform.upper()} 모드로 시작합니다.[/]\n")
+        channel_type = PLATFORM_CHANNEL_TYPE.get(platform, "")
+        console.print(f"\n[{color}]{emoji} {platform.upper()}[/] [dim]({channel_type})[/] 모드로 시작합니다.\n")
     else:
-        console.print("\n[dim]💡 팁: --platform 옵션으로 특정 플랫폼을 지정할 수 있습니다.[/]\n")
+        console.print(
+            "\n[dim]💡 팁: --platform 옵션으로 특정 플랫폼을 지정할 수 있습니다.\n"
+            "   커리어 채널: brunch, linkedin\n"
+            "   개인 채널:   blog, instagram[/]\n"
+        )
 
     console.print("[dim]'quit' 또는 'exit'를 입력하면 종료합니다. 'reset'으로 대화를 초기화합니다.[/]\n")
 

@@ -26,7 +26,7 @@ class ContentAgent:
         if platform:
             platform_guide = get_platform_prompt(platform)
             if platform_guide:
-                base += f"\n\n## 현재 작업 플랫폼: {platform.upper()}\n{platform_guide}"
+                base += f"\n\n## 현재 작업 플랫폼 가이드\n{platform_guide}"
 
             # Inject learned personal style profile if available
             style_injection = build_style_system_prompt(platform)
